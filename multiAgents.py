@@ -152,7 +152,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
     def getActionHelper(self, gameState, depth, agentIndex):
       legalMoves = gameState.getLegalActions(agentIndex)
-      if depth == 0 and agentIndex == gameState.getNumAgents() - 1 or len(legalMoves) == 0:
+      if depth == 0 and agentIndex == 0 or len(legalMoves) == 0:
           return self.evaluationFunction(gameState)
       else:
           nextAgent = agentIndex + 1
