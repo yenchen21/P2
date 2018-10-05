@@ -15,7 +15,7 @@
 from util import manhattanDistance
 from game import Directions
 import random, util
-
+import sys
 from game import Agent
 
 class ReflexAgent(Agent):
@@ -72,9 +72,29 @@ class ReflexAgent(Agent):
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
-
-        "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        # Distance from nearest ghost
+        nearest_ghost = manhattanDistance(newGhostStates[0].getPosition(), newPos) if newScaredTimes[0] == 0 else sys.maxint
+        for i in range(1,len(newGhostStates)):
+          curr_distance = manhattanDistance(newPos, newGhostStates[i].getPosition())
+          if curr_distance < nearest_ghost and newScaredTimes[i] == 0:
+            nearest_ghost = curr_distance 
+        if nearest_ghost > 5:
+          nearest_ghost = 5
+        # Distance to nearest food?
+        nearest_food = 0
+        if newFood.count() > 0:
+          nearest_food = manhattanDistance(newFood.asList()[0], newPos)
+          for food in newFood.asList():
+            curr_distance = manhattanDistance(food, newPos)
+            if curr_distance < nearest_food:
+              nearest_food = curr_distance
+        food_count = newFood.count()
+        if food_count == 0:
+          food_count = 1
+        if nearest_food == 0:
+          nearest_food = .05
+         
+        return successorGameState.getScore() + 1/food_count + .05/nearest_food + 11*nearest_ghost
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -118,7 +138,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
           Here are some method calls that might be useful when implementing minimax.
 
-          gameState.getLegalActions(agentIndex):
+            gameState.getLegalActions(agentIndex):
             Returns a list of legal actions for an agent
             agentIndex=0 means Pacman, ghosts are >= 1
 
@@ -128,8 +148,32 @@ class MinimaxAgent(MultiAgentSearchAgent):
           gameState.getNumAgents():
             Returns the total number of agents in the game
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return self.getActionHelper(gameState, self.depth, 0)
+
+    def getActionHelper(self, gameState, depth, agentIndex):
+      legalMoves = gameState.getLegalActions(agentIndex)
+      if depth == 0 and agentIndex == gameState.getNumAgents() - 1 or len(legalMoves) == 0:
+          return self.evaluationFunction(gameState)
+      else:
+          nextAgent = agentIndex + 1
+          if agentIndex == gameState.getNumAgents() - 1:
+            depth -= 1
+            nextAgent = 0
+          child_states = []
+          for move in legalMoves:
+            successorState = gameState.generateSuccessor(agentIndex, move)
+            child_states.append(self.getActionHelper(successorState, depth, nextAgent))
+          if agentIndex == 0:
+            # Pacman
+            bestScore = max(child_states)
+          else: 
+            bestScore = min(child_states)
+          if agentIndex and depth == self.depth:
+            bestIndices = [index for index in range(len(child_states)) if child_states[index] == bestScore]
+            chosenIndex = random.choice(bestIndices) # Pick randomly among the best
+            return legalMoves[chosenIndex]
+          else:
+            return bestScore              
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
