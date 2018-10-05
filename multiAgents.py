@@ -168,7 +168,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
             bestScore = max(child_states)
           else: 
             bestScore = min(child_states)
-          if agentIndex and depth == self.depth:
+          if agentIndex == 0 and depth == self.depth:
             bestIndices = [index for index in range(len(child_states)) if child_states[index] == bestScore]
             chosenIndex = random.choice(bestIndices) # Pick randomly among the best
             return legalMoves[chosenIndex]
