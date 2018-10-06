@@ -148,32 +148,48 @@ class MinimaxAgent(MultiAgentSearchAgent):
           gameState.getNumAgents():
             Returns the total number of agents in the game
         """
-        return self.getActionHelper(gameState, self.depth, 0)
 
-    def getActionHelper(self, gameState, depth, agentIndex):
-      legalMoves = gameState.getLegalActions(agentIndex)
-      if depth == 0 and agentIndex == 0 or len(legalMoves) == 0:
-          return self.evaluationFunction(gameState)
-      else:
-          nextAgent = agentIndex + 1
-          if agentIndex == gameState.getNumAgents() - 1:
+        def value(gameState, depth, agentIndex):
+          if agentIndex == gameState.getNumAgents():
+            agentIndex = 0
             depth -= 1
-            nextAgent = 0
-          child_states = []
+
+          terminalState = gameState.isWin() or gameState.isLose()
+          if depth == 0 or terminalState:
+              return [self.evaluationFunction(gameState), Directions.STOP]
+          
+          if agentIndex == 0:
+            return maxValue(gameState, depth)
+          else:
+            return minValue(gameState, depth, agentIndex)
+
+        def maxValue(gameState, depth):
+          legalMoves = gameState.getLegalActions(0)
+
+          v = (-sys.maxint - 1)
+          m = Directions.STOP
+          for move in legalMoves:
+            successorState = gameState.generateSuccessor(0, move)
+            t = v
+            v = max(v, value(successorState, depth, 1)[0])
+            if t != v:
+              m = move
+          return [v, m]
+
+        def minValue(gameState, depth, agentIndex):
+          legalMoves = gameState.getLegalActions(agentIndex)
+
+          v = sys.maxint
+          m = Directions.STOP
           for move in legalMoves:
             successorState = gameState.generateSuccessor(agentIndex, move)
-            child_states.append(self.getActionHelper(successorState, depth, nextAgent))
-          if agentIndex == 0:
-            # Pacman
-            bestScore = max(child_states)
-          else: 
-            bestScore = min(child_states)
-          if agentIndex == 0 and depth == self.depth:
-            bestIndices = [index for index in range(len(child_states)) if child_states[index] == bestScore]
-            chosenIndex = random.choice(bestIndices) # Pick randomly among the best
-            return legalMoves[chosenIndex]
-          else:
-            return bestScore              
+            t = v
+            v = min(v, value(successorState, depth, agentIndex+1)[0])
+            if t != v:
+              m = move
+          return [v, m]
+
+        return value(gameState, self.depth, 0)[1]
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -184,8 +200,54 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
           Returns the minimax action using self.depth and self.evaluationFunction
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        def value(gameState, depth, agentIndex, alpha, beta):
+          if agentIndex == gameState.getNumAgents():
+            agentIndex = 0
+            depth -= 1
+
+          terminalState = gameState.isWin() or gameState.isLose()
+          if depth == 0 or terminalState:
+              return [self.evaluationFunction(gameState), Directions.STOP]
+          
+          if agentIndex == 0:
+            return maxValue(gameState, depth, alpha, beta)
+          else:
+            return minValue(gameState, depth, agentIndex, alpha, beta)
+
+        def maxValue(gameState, depth, alpha, beta):
+          legalMoves = gameState.getLegalActions(0)
+
+          v = (-sys.maxint - 1)
+          m = Directions.STOP
+          for move in legalMoves:
+            successorState = gameState.generateSuccessor(0, move)
+            t = v
+            v = max(v, value(successorState, depth, 1, alpha, beta)[0])
+            if t != v:
+              m = move
+            if v > beta:
+              return [v, m]
+            alpha = max(alpha, v)
+          return [v, m]
+
+        def minValue(gameState, depth, agentIndex, alpha, beta):
+          legalMoves = gameState.getLegalActions(agentIndex)
+
+          v = sys.maxint
+          m = Directions.STOP
+          for move in legalMoves:
+            successorState = gameState.generateSuccessor(agentIndex, move)
+            t = v
+            v = min(v, value(successorState, depth, agentIndex+1, alpha, beta)[0])
+            if t != v:
+              m = move
+            if v < alpha:
+              return [v, m]
+            beta = min(beta, v)
+          return [v, m]
+
+        return value(gameState, self.depth, 0, (-sys.maxint - 1), sys.maxint)[1]
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
