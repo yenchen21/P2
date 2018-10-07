@@ -67,10 +67,10 @@ class ReflexAgent(Agent):
         to create a masterful evaluation function.
         """
         # Useful information you can extract from a GameState (pacman.py)
-        successorGameState = currentGameState.generatePacmanSuccessor(action)
-        newPos = successorGameState.getPacmanPosition()
-        newFood = successorGameState.getFood()
-        newGhostStates = successorGameState.getGhostStates()
+        currentGameState = currentGameState.generatePacmanSuccessor(action)
+        newPos = currentGameState.getPacmanPosition()
+        newFood = currentGameState.getFood()
+        newGhostStates = currentGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
         # Distance from nearest ghost
         nearest_ghost = manhattanDistance(newGhostStates[0].getPosition(), newPos) if newScaredTimes[0] == 0 else sys.maxint
@@ -94,7 +94,7 @@ class ReflexAgent(Agent):
         if nearest_food == 0:
           nearest_food = .05
          
-        return successorGameState.getScore() + 1/food_count + .05/nearest_food + 11*nearest_ghost
+        return currentGameState.getScore() + 10/food_count + .05/nearest_food + 11*nearest_ghost
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -307,8 +307,72 @@ def betterEvaluationFunction(currentGameState):
 
       DESCRIPTION: <write something here so we know what you did>
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # Useful information you can extract from a GameState (pacman.py)
+    newPos = currentGameState.getPacmanPosition()
+    newFood = currentGameState.getFood()
+    newGhostStates = currentGameState.getGhostStates()
+    newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+
+   
+    def calcGhostScore(ghostStates, scaredTimes, pos):
+        nearest_ghost = manhattanDistance(ghostStates[0].getPosition(), pos) if scaredTimes[0] == 0 else sys.maxint
+        nearest_scared = False
+        for i in range(1,len(ghostStates)):
+          curr_distance = manhattanDistance(pos, ghostStates[i].getPosition())
+          if curr_distance < nearest_ghost:
+            nearest_scared = scaredTimes[i] != 0
+            nearest_ghost = curr_distance 
+        if nearest_scared:
+          nearest_ghost = 5*nearest_ghost
+        else:
+          if nearest_ghost > 5:
+            nearest_ghost = 5
+          else:
+            # If ghost is close, look for nearest capsule
+            if nearest_ghost == 0:
+              nearest_ghost = 1
+            nearest_ghost = 1.0/(nearest_ghost*11)
+        return nearest_ghost
+
+    def calcFoodScore(foodPos, pos):
+       # Distance to nearest food?
+      furthest_food = 0
+      nearest_food = 0
+      if foodPos.count() > 0:
+        furthest_food = manhattanDistance(foodPos.asList()[0], pos)
+        nearest_food = furthest_food
+        for food in foodPos.asList():
+          curr_distance = manhattanDistance(food, pos)
+          if curr_distance > furthest_food:
+            furthest_food = curr_distance
+          if curr_distance < nearest_food:
+            nearest_food = curr_distance
+      food_count = foodPos.count()
+      if food_count == 0:
+        food_count = 1
+      if furthest_food == 0:
+        furthest_food = .05
+      if nearest_food == 0:
+        nearest_food = .05
+      return (10/food_count, .05/nearest_food, .05/furthest_food)
+
+
+    def calcCapsuleScore(capsules, nearestGhost, pos): 
+        nearest_capsule = sys.maxint 
+        if len(capsules) > 0:
+          nearest_capsule = manhattanDistance(capsules[0], pos)
+          for capsule in capsules:
+            curr_distance = manhattanDistance(capsule, pos)
+            if curr_distance < nearest_capsule:
+              nearest_capsule = curr_distance
+          if nearest_capsule > 5 or nearestGhost > 5:
+            nearest_capsule = sys.maxint
+        return 1.0/nearest_capsule
+    foodCount, nearestFood, furthestFood = calcFoodScore(newFood, newPos) 
+    nearestGhost = calcGhostScore(newGhostStates, newScaredTimes, newPos)
+    nearestCapsule = calcCapsuleScore(currentGameState.getCapsules(), nearestGhost, newPos)
+    
+    return currentGameState.getScore() + foodCount + nearestFood + furthestFood + nearestGhost
 
 # Abbreviation
 better = betterEvaluationFunction
